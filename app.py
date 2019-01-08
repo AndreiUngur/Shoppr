@@ -49,16 +49,50 @@ class CreateProduct(graphene.Mutation):
 
     product = graphene.Field(lambda: ProductObject)
 
-    def mutate(self, title, price, inventory_count):
-        product = Product.query.filter_by(title=title).first()
-
+    def mutate(self, _, title, price, inventory_count):
+        product = Product(title=title, price=price, inventory_count=inventory_count)
         db.session.add(product)
         db.session.commit()
 
         return CreateProduct(product=product)
 
+class FetchOneProduct(graphene.Mutation):
+    class Arguments:
+        title = graphene.String(required=True)
+    
+    product = graphene.Field(lambda: ProductObject)
+    
+    def mutate(self, _, title):
+        product = Product.query.filter_by(title=title).first()
+        return FetchOneProduct(product=product)
+
+class FetchAllProducts(graphene.Mutation):
+
+    product = graphene.List(ProductObject)
+
+    def mutate(self, _):
+        products = Product.query.filter(Product.inventory_count > 0)
+        return FetchAllProducts(product=products)
+
+class PurchaseProduct(graphene.Mutation):
+    class Arguments:
+        title = graphene.String(required=True)
+        money = graphene.Float(required=True)
+    
+    product = graphene.Field(lambda: ProductObject)
+    
+    def mutate(self, _, title, money):
+        purchased_product = Product.query.filter_by(title=title).filter(Product.inventory_count > 0).first()
+        if not purchased_product:
+            raise Exception
+        purchased_product.inventory_count -=  1
+        return PurchaseProduct(product=purchased_product)
+
 class Mutation(graphene.ObjectType):
     create_product = CreateProduct.Field()
+    fetch_one_product = FetchOneProduct.Field()
+    fetch_all_products = FetchAllProducts.Field()
+    purchase_product = PurchaseProduct.Field()
 
 schema = graphene.Schema(query=Query, mutation=Mutation)
 
