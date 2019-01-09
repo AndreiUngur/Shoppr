@@ -1,5 +1,6 @@
 from sqlalchemy import create_engine, exc
-from app import db
+import tables
+from utils import db
 
 engine = create_engine("mysql://localhost/mysql")
 conn = engine.connect()
