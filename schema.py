@@ -2,6 +2,7 @@ import graphene
 from graphene_sqlalchemy import SQLAlchemyObjectType, SQLAlchemyConnectionField
 from tables import Product, Cart, CartItem
 from datetime import datetime
+from utils import db
 
 class ProductObject(SQLAlchemyObjectType):
    class Meta:
@@ -31,6 +32,9 @@ class CreateProduct(graphene.Mutation):
     product = graphene.Field(lambda: ProductObject)
 
     def mutate(self, _, title, price, inventory_count):
+        product = Product.query.filter_by(title=title).first()
+        if product:
+            raise Exception("Product already exists in database.")
         product = Product(title=title, price=price, inventory_count=inventory_count)
         db.session.add(product)
         db.session.commit()
@@ -87,8 +91,11 @@ class CreateCart(graphene.Mutation):
 
     cart = graphene.Field(lambda: CartObject)
 
-    def mutate(self, _, uid):
-        cart = Cart(user_id=uid, created_date=datetime.now())
+    def mutate(self, _, user):
+        cart = Cart.query.filter_by(user_id=user).first()
+        if cart:
+            raise Exception("Cart already exists for user.")
+        cart = Cart(user_id=user, created_date=datetime.now())
         db.session.add(cart)
         db.session.commit()
 
@@ -102,13 +109,21 @@ class AddToCart(graphene.Mutation):
 
     cartitems = graphene.List(CartItemObject)
 
-    def mutate(self, _, user):
-        product = Product.query.filter_by(title=title).filter(Product.inventory_count > 0).first()
+    def mutate(self, _, user, title, quantity):
+        if quantity <= 0:
+            raise Exception("Quantity must be at least 1.")
+        product = Product.query.filter_by(title=title).filter(Product.inventory_count >= quantity).first()
         if not product:
             raise Exception("Item not in stock.")
-        cart = Cart.query.filter_by(user=user).first()
+        cart = Cart.query.filter_by(user_id=user).first()
         if not cart:
             raise Exception("Please create a cart!")
+        current_items = CartItem.query.filter_by(cart_id=cart.id)
+        for item in current_items:
+            if item.id == product.id:
+                item.quantity += quantity
+                all_items = CartItem.query.filter_by(cart_id=cart.id).all()
+                return AddToCart(cartitems=all_items)
         item = CartItem(product_id=product.id, cart_id=cart.id, quantity=quantity)
         db.session.add(item)
         db.session.commit()
@@ -124,7 +139,7 @@ class CompleteCart(graphene.Mutation):
     purchased_products = graphene.List(ProductObject)
 
     def mutate(self, _, user, funds):
-        cart = Cart.query.filter_by(user=user).first()
+        cart = Cart.query.filter_by(user_id=user).first()
         cartitems = CartItem.query.filter_by(cart_id=cart.id).all()
         total_cost = 0
         purchased_products = []

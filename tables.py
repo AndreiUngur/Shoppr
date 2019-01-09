@@ -18,7 +18,7 @@ class Cart(db.Model):
     __tablename__ = 'carts'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer)
+    user_id = db.Column(db.Integer, unique=True)
     created_date = db.Column(db.DateTime)
     carts = db.relationship("CartItem", backref="carts", lazy=True)
 
