@@ -20,6 +20,7 @@ class Cart(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, unique=True)
     created_date = db.Column(db.DateTime)
+    total = db.Column(db.Float)
     carts = db.relationship("CartItem", backref="carts", lazy=True)
 
     def __repr__(self):

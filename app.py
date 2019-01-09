@@ -20,8 +20,9 @@ app.add_url_rule(
 @app.route('/')
 def index():
     welcome_header = '<h1>Welcome to my store!</h1>'
-    advertisement = '<p>To know more about me, please visit <a href="http://andreiungur.github.io/">my personal web page.</a></p'
-    return welcome_header + advertisement
+    advertisement = '<p>To know more about me, please visit <a href="http://andreiungur.github.io/">my personal web page.</a></p>'
+    graphql_endpoint = '<p>To use this API, visit the GraphQL end-point: <span style="color: blue">/graphql</span></p>'
+    return welcome_header + advertisement + graphql_endpoint
 
 
 if __name__ == '__main__':

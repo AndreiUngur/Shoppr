@@ -83,6 +83,8 @@ class FetchOneProduct(graphene.Mutation):
     
     def mutate(self, _, title):
         product = Product.query.filter_by(title=title).first()
+        if not product:
+            raise Exception("Product doesn't exist.")
         return FetchOneProduct(product=product)
 
 class FetchAllProducts(graphene.Mutation):
@@ -125,10 +127,8 @@ class PurchaseProduct(graphene.Mutation):
     def mutate(self, _, title, funds):
         purchased_product = Product.query.filter_by(title=title).filter(Product.inventory_count > 0).first()
         if not purchased_product:
-            # TODO: Better exception handling
             raise Exception("Product not in store")
         if funds < purchased_product.price:
-            # TODO: Better exception handling
             raise Exception("Insufficient funds.")
         purchased_product.inventory_count -=  1
         return PurchaseProduct(product=purchased_product)
@@ -151,7 +151,7 @@ class CreateCart(graphene.Mutation):
         cart = Cart.query.filter_by(user_id=user).first()
         if cart:
             raise Exception("Cart already exists for user.")
-        cart = Cart(user_id=user, created_date=datetime.now())
+        cart = Cart(user_id=user, created_date=datetime.now(), total=0)
         db.session.add(cart)
         db.session.commit()
 
@@ -195,6 +195,7 @@ class AddToCart(graphene.Mutation):
                 # The new quantity must be valid, relative to the amount in stock.
                 if item.quantity + quantity <= product.inventory_count:
                     item.quantity += quantity
+                    cart.total += product.price
                     all_items = CartItem.query.filter_by(cart_id=cart.id).all()
                     return AddToCart(cartitems=all_items)
                 else:
@@ -203,6 +204,7 @@ class AddToCart(graphene.Mutation):
         item = CartItem(product_id=product.id, cart_id=cart.id, quantity=quantity)
         db.session.add(item)
         db.session.commit()
+        cart.total += product.price
 
         # Return the updated list of cart items to the user.
         all_items = CartItem.query.filter_by(cart_id=cart.id).all()
@@ -235,7 +237,6 @@ class CompleteCart(graphene.Mutation):
 
         # Evaluate the total cost of the cart
         cartitems = CartItem.query.filter_by(cart_id=cart.id).all()
-        total_cost = 0
         purchased_products = []
         for item in cartitems:
             product = Product.query.filter_by(id=item.product_id).filter(Product.inventory_count >= item.quantity).first()
@@ -243,12 +244,11 @@ class CompleteCart(graphene.Mutation):
                 # The product is now out of stock, or in insufficient quantities.
                 # We ignore it.
                 continue
-            total_cost += product.price
             purchased_products.append(product)
 
         # User didn't provide sufficient funds for their purchase
-        if total_cost > funds:
-            raise Exception(f"Insufficient funds. Cost is {total_cost} but you have {funds}.")
+        if cart.total > funds:
+            raise Exception(f"Insufficient funds. Cost is {cart.total} but you have {funds}.")
         
         # Remove products purchased from inventory
         for product in purchased_products:
