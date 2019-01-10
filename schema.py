@@ -247,20 +247,22 @@ class CompleteCart(graphene.Mutation):
                 # The product is now out of stock, or in insufficient quantities.
                 # We ignore it.
                 continue
-            purchased_products.append(product)
+            purchased_products.append((product, item.quantity))
 
         # User didn't provide sufficient funds for their purchase
         if cart.total > funds:
             raise Exception(f"Insufficient funds. Cost is {cart.total} but you have {funds}.")
 
         # Remove products purchased from inventory
-        for product in purchased_products:
-            product.inventory_count -=  1
+        products = []
+        for product, quantity in purchased_products:
+            products.append(product)
+            product.inventory_count -= quantity
 
         # Delete cart items as well as cart.
         CartItem.query.filter_by(cart_id=cart.id).delete(synchronize_session=False)
         Cart.query.filter_by(id=cart.id).delete(synchronize_session=False)
-        return CompleteCart(products=purchased_products)
+        return CompleteCart(products=products)
 
 
 class Mutation(graphene.ObjectType):
