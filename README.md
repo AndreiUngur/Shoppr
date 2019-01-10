@@ -66,7 +66,7 @@ Request:
 ```
 mutation{
     fetchAllProducts(onlyAvailableItems: true){
-        product{
+        products{
             id,
             title,
             price,

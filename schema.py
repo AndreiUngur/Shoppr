@@ -218,6 +218,9 @@ class CompleteCart(graphene.Mutation):
     unavailable items, the system will ignore unavailable items but
     proceed with the purchase of available ones.
 
+    Once a cart is completed, the user will receive the new state of
+    the database for the purchased products.
+
     Arguments:
     user: User wishing to purchase cart items.
     funds: Money user is wishing to spend on the cart.
@@ -249,7 +252,7 @@ class CompleteCart(graphene.Mutation):
         # User didn't provide sufficient funds for their purchase
         if cart.total > funds:
             raise Exception(f"Insufficient funds. Cost is {cart.total} but you have {funds}.")
-        
+
         # Remove products purchased from inventory
         for product in purchased_products:
             product.inventory_count -=  1
