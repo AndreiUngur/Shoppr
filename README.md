@@ -130,6 +130,7 @@ mutation{
 ## 5. Complete cart
 We are ready to purchase our two sunglasses, so we complete the cart. :tada:
 Notice how we are unable to complete it if we have insufficient funds, and once the cart is completed it is also deleted.
+Note that completing the cart will return to the user the updated inventory of products for those products which have been successfully purchased.
 ![alt text](demogifs/completecart.gif "Complete Cart")
 Request:
 ```
